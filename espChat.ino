@@ -136,6 +136,8 @@ void setup() {
 void loop() {
   static unsigned long lastCheck = 0;
   static bool triedDefault = false;
+  static bool reconnecting = false;
+  static unsigned long reconnectStart = 0;
 
   // 🔹 Handle serial input
   if (Serial.available()) {
@@ -150,26 +152,36 @@ void loop() {
     }
   }
 
-  // 🔹 Handle WiFi reconnect
-  if (WiFi.status() != WL_CONNECTED && millis() - lastCheck > 10000) {
-    lastCheck = millis();
-    Serial.println("🔄 Network disconnected. Retrying...");
+  // 🔹 Handle WiFi reconnect without blocking
+  if (WiFi.status() != WL_CONNECTED) {
+    if (!reconnecting && millis() - lastCheck > 10000) {
+      lastCheck = millis();
+      Serial.println("🔄 Network disconnected. Retrying...");
 
-    if (!triedDefault) {
-      Serial.print("🔌 Retrying saved Network: ");
-      Serial.println(ssid);
-      WiFi.begin(ssid.c_str(), password.c_str());
-      delay(5000);
-      if (WiFi.status() != WL_CONNECTED) {
+      if (!triedDefault) {
+        Serial.print("🔌 Retrying saved Network: ");
+        Serial.println(ssid);
+        WiFi.begin(ssid.c_str(), password.c_str());
+      } else {
+        Serial.print("🔌 Retrying default Network: ");
+        Serial.println(DEFAULT_SSID);
+        WiFi.begin(DEFAULT_SSID, DEFAULT_PASS);
+      }
+
+      reconnecting = true;
+      reconnectStart = millis();
+    } else if (reconnecting && millis() - reconnectStart > 5000) {
+      if (WiFi.status() != WL_CONNECTED && !triedDefault) {
         Serial.println("⚠️ Failed. Falling back to default Network...");
         WiFi.begin(DEFAULT_SSID, DEFAULT_PASS);
         triedDefault = true;
+        reconnectStart = millis();
+      } else {
+        reconnecting = false;
       }
-    } else {
-      Serial.print("🔌 Retrying default Network: ");
-      Serial.println(DEFAULT_SSID);
-      WiFi.begin(DEFAULT_SSID, DEFAULT_PASS);
     }
+  } else {
+    reconnecting = false;
   }
 
   // 🔁 Poll messages via REST every 5s
