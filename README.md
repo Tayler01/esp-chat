@@ -43,6 +43,18 @@ Type `!help` in the serial console to see available commands:
 - `!reboot` – reboot the device
 - `!ip` – print the current IP address
 
+## Firmware updates
+
+The device queries a `firmware_updates` table in Supabase to check for newer firmware. Create a table with columns:
+
+| Column | Type | Description |
+|-------|------|-------------|
+| `version` | text | firmware version string |
+| `binary_url` | text | HTTPS URL to the compiled `.bin` file |
+
+Upload the new binary and insert a row with its version and URL. The sketch fetches
+`https://<project>.supabase.co/rest/v1/firmware_updates?select=version,binary_url&order=version.desc&limit=1` and if the version differs from `CURRENT_VERSION` it downloads and installs the update.
+
 ## License
 
 This project is released under the [MIT](LICENSE) license.

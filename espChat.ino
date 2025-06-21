@@ -3,6 +3,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include <Update.h>
 #include "esp_log.h"
 
 // Enable WiFi debug output if needed
@@ -21,10 +22,14 @@ const char* DEFAULT_PASS = "42375400";
 const char* supabaseUrl = "https://qymcapixzxuvzcgdjksq.supabase.co/rest/v1/messages";
 const char* supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5bWNhcGl4enh1dnpjZ2Rqa3NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NTU4MTIsImV4cCI6MjA2NTMzMTgxMn0.GNeDHArcgJZNQpKQOL7DDRQJqbwQ5YwcQOOTsL6TvuE";
 
+#define CURRENT_VERSION "1.0.0"
+const char* updateQueryUrl = "https://qymcapixzxuvzcgdjksq.supabase.co/rest/v1/firmware_updates?select=version,binary_url&order=version.desc&limit=1";
 String userName, userId, avatarColor, ssid, password;
 String lastTimestamp = "";
 unsigned long lastPoll = 0;
 unsigned long pollInterval = 5000;
+unsigned long lastUpdateCheck = 0;
+unsigned long updateCheckInterval = 3600000;
 
 WiFiClientSecure client;
 
@@ -130,6 +135,7 @@ void setup() {
     client.setInsecure();
     Serial.print(F("📡 IP Address: "));
     Serial.println(WiFi.localIP());
+    checkForUpdate();
     Serial.println(F("📡 ESP32 Chat Terminal Ready"));
     Serial.println(F("⌨️ Type to send. Incoming messages will appear below."));
   } else {
@@ -198,6 +204,10 @@ void loop() {
     if (millis() - lastPoll > pollInterval) {
       lastPoll = millis();
       fetchMessages();
+    }
+    if (millis() - lastUpdateCheck > updateCheckInterval) {
+      lastUpdateCheck = millis();
+      checkForUpdate();
     }
   }
 }
@@ -339,5 +349,61 @@ void fetchMessages() {
     Serial.printf("❌ Fetch failed (%d): %s\n", httpCode, https.getString().c_str());
   }
 
+  https.end();
+}
+
+void checkForUpdate() {
+  Serial.println(F("\xF0\x9F\x94\x8D Checking for firmware update..."));
+  HTTPClient https;
+  https.begin(client, updateQueryUrl);
+  https.addHeader("apikey", supabaseKey);
+  https.addHeader("Authorization", "Bearer " + String(supabaseKey));
+  int code = https.GET();
+  if (code == 200) {
+    DynamicJsonDocument doc(JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(2) + 64);
+    DeserializationError err = deserializeJson(doc, https.getStream());
+    if (!err && doc.size() > 0) {
+      String latest = doc[0]["version"] | "";
+      String binUrl = doc[0]["binary_url"] | "";
+      if (latest.length() > 0 && binUrl.length() > 0 && latest != CURRENT_VERSION) {
+        Serial.printf("\xF0\x9F\x94\x84 Updating to %s from %s\n", latest.c_str(), CURRENT_VERSION);
+        https.end();
+
+        HTTPClient bin;
+        bin.begin(client, binUrl);
+        int bCode = bin.GET();
+        if (bCode == 200) {
+          int total = bin.getSize();
+          WiFiClient* stream = bin.getStreamPtr();
+          if (Update.begin(total)) {
+            size_t written = Update.writeStream(*stream);
+            if (written == total) {
+              Serial.println(F("\xE2\x9C\x85 Update written"));
+            } else {
+              Serial.println(F("\xE2\x9A\xA0\xEF\xB8\x8F Incomplete write"));
+            }
+            if (Update.end()) {
+              Serial.println(F("\xF0\x9F\x94\x81 Rebooting to apply update..."));
+              ESP.restart();
+            } else {
+              Update.printError(Serial);
+            }
+          } else {
+            Update.printError(Serial);
+          }
+        } else {
+          Serial.printf("\xE2\x9D\x8C Firmware download failed (%d)\n", bCode);
+        }
+        bin.end();
+        return;
+      } else {
+        Serial.println(F("Firmware up to date"));
+      }
+    } else {
+      Serial.println(F("Update JSON parse error"));
+    }
+  } else {
+    Serial.printf("Update check failed (%d): %s\n", code, https.getString().c_str());
+  }
   https.end();
 }
