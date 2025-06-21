@@ -259,12 +259,13 @@ void sendMessage(String content) {
   String json;
   serializeJson(doc, json);
 
-
+  // POST the message and expect an HTTP 201 Created response
   int code = https.POST(json);
-  if (code > 0) {
+  String resp = https.getString();
+  if (code == 201 || code == 200) {
     Serial.println("📤 Sent");
   } else {
-    Serial.printf("❌ Send failed: %s\n", https.errorToString(code).c_str());
+    Serial.printf("❌ Send failed (%d): %s\n", code, resp.c_str());
   }
   https.end();
 }
