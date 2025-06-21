@@ -250,7 +250,10 @@ void sendMessage(String content) {
   https.addHeader("apikey", supabaseKey);
   https.addHeader("Authorization", "Bearer " + String(supabaseKey));
 
-  DynamicJsonDocument doc(512);
+  size_t cap = JSON_OBJECT_SIZE(4) +
+                content.length() + userName.length() +
+                userId.length() + avatarColor.length() + 64;
+  DynamicJsonDocument doc(cap);
   doc["content"] = content;
   doc["user_name"] = userName;
   doc["user_id"] = userId;
@@ -285,10 +288,11 @@ void fetchMessages() {
 
   int httpCode = https.GET();
   if (httpCode == 200) {
-    String payload = https.getString();
-    DynamicJsonDocument doc(8192);
+    const size_t AVG_MSG = 200; // avg chars per message
+    size_t capacity = JSON_ARRAY_SIZE(50) + 50 * JSON_OBJECT_SIZE(4) + 50 * AVG_MSG;
+    DynamicJsonDocument doc(capacity);
 
-    DeserializationError err = deserializeJson(doc, payload);
+    DeserializationError err = deserializeJson(doc, https.getStream());
     if (err) {
       Serial.printf("❌ Fetch JSON parse error: %s\n", err.c_str());
       https.end();
