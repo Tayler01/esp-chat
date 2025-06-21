@@ -39,7 +39,7 @@ String urlEncode(const String& str) {
     if (isalnum(c)) {
       encoded += c;
     } else {
-      sprintf(bufHex, "%%%02X", c);
+      sprintf(bufHex, "%%%02X", (unsigned char)c);
       encoded += bufHex;
     }
   }
