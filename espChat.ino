@@ -85,9 +85,9 @@ void setup() {
   delay(500);
 
   loadSettings();
-  Serial.println("📘 Type !help for editable settings and commands");
+  Serial.println(F("📘 Type !help for editable settings and commands"));
 
-  Serial.print("🔌 Connecting to ChatBox: ");
+  Serial.print(F("🔌 Connecting to ChatBox: "));
   //Serial.println(ssid);
   WiFi.begin(ssid.c_str(), password.c_str());
 
@@ -96,7 +96,7 @@ void setup() {
 
   while (WiFi.status() != WL_CONNECTED && millis() - start < wifiTimeout) {
     delay(250);
-    Serial.print(".");
+    Serial.print(F("."));
     if (Serial.available()) {
       String input = Serial.readStringUntil('\n');
       input.trim();
@@ -105,12 +105,12 @@ void setup() {
   }
 
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("\n⚠️ Failed to connect to saved Network. Retrying with default credentials...");
+    Serial.println(F("\n⚠️ Failed to connect to saved Network. Retrying with default credentials..."));
     WiFi.begin(DEFAULT_SSID, DEFAULT_PASS);
     start = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - start < wifiTimeout) {
       delay(250);
-      Serial.print(".");
+      Serial.print(F("."));
       if (Serial.available()) {
         String input = Serial.readStringUntil('\n');
         input.trim();
@@ -120,16 +120,16 @@ void setup() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n✅ ChatBox Connected!");
+    Serial.println(F("\n✅ ChatBox Connected!"));
     client.setInsecure();
-    Serial.print("📡 IP Address: ");
+    Serial.print(F("📡 IP Address: "));
     Serial.println(WiFi.localIP());
-    Serial.println("📡 ESP32 Chat Terminal Ready");
-    Serial.println("⌨️ Type to send. Incoming messages will appear below.");
+    Serial.println(F("📡 ESP32 Chat Terminal Ready"));
+    Serial.println(F("⌨️ Type to send. Incoming messages will appear below."));
   } else {
-    Serial.println("\n❌ No Network connection.");
-    Serial.println("⚠️ Offline mode: Commands available, messaging disabled.");
-    Serial.println("🛠️ Use !setssid / !setpass and !reboot to fix.");
+    Serial.println(F("\n❌ No Network connection."));
+    Serial.println(F("⚠️ Offline mode: Commands available, messaging disabled."));
+    Serial.println(F("🛠️ Use !setssid / !setpass and !reboot to fix."));
   }
 }
 
@@ -147,27 +147,27 @@ void loop() {
     } else if (input.length() > 0 && WiFi.status() == WL_CONNECTED) {
       sendMessage(input);
     } else if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("⚠️ Not connected. Message ignored.");
+      Serial.println(F("⚠️ Not connected. Message ignored."));
     }
   }
 
   // 🔹 Handle WiFi reconnect
   if (WiFi.status() != WL_CONNECTED && millis() - lastCheck > 10000) {
     lastCheck = millis();
-    Serial.println("🔄 Network disconnected. Retrying...");
+    Serial.println(F("🔄 Network disconnected. Retrying..."));
 
     if (!triedDefault) {
-      Serial.print("🔌 Retrying saved Network: ");
+      Serial.print(F("🔌 Retrying saved Network: "));
       Serial.println(ssid);
       WiFi.begin(ssid.c_str(), password.c_str());
       delay(5000);
       if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("⚠️ Failed. Falling back to default Network...");
+        Serial.println(F("⚠️ Failed. Falling back to default Network..."));
         WiFi.begin(DEFAULT_SSID, DEFAULT_PASS);
         triedDefault = true;
       }
     } else {
-      Serial.print("🔌 Retrying default Network: ");
+      Serial.print(F("🔌 Retrying default Network: "));
       Serial.println(DEFAULT_SSID);
       WiFi.begin(DEFAULT_SSID, DEFAULT_PASS);
     }
@@ -190,53 +190,53 @@ void handleCommand(String cmd) {
   if (cmd.startsWith("!setname ")) {
     userName = cmd.substring(9);
     saveSetting("name", userName);
-    Serial.println("✅ Name updated");
+    Serial.println(F("✅ Name updated"));
   } else if (cmd.startsWith("!setid ")) {
     userId = cmd.substring(7);
     saveSetting("id", userId);
-    Serial.println("✅ ID updated");
+    Serial.println(F("✅ ID updated"));
   } else if (cmd.startsWith("!setcolor ")) {
     avatarColor = cmd.substring(10);
     saveSetting("color", avatarColor);
-    Serial.println("✅ Color updated");
+    Serial.println(F("✅ Color updated"));
   } else if (cmd.startsWith("!setssid ")) {
     ssid = cmd.substring(9);
     saveSetting("ssid", ssid);
-    Serial.println("✅ SSID saved. Use !reboot to apply.");
+    Serial.println(F("✅ SSID saved. Use !reboot to apply."));
   } else if (cmd.startsWith("!setpass ")) {
     password = cmd.substring(9);
     saveSetting("pass", password);
-    Serial.println("✅ Password saved. Use !reboot to apply.");
+    Serial.println(F("✅ Password saved. Use !reboot to apply."));
   } else if (cmd == "!reboot") {
-    Serial.println("♻️ Rebooting...");
+    Serial.println(F("♻️ Rebooting..."));
     delay(1000);
     ESP.restart();
   } else if (cmd == "!reset") {
-    Serial.println("🧹 Resetting to defaults...");
+    Serial.println(F("🧹 Resetting to defaults..."));
     resetSettings();
   } else if (cmd == "!ip") {
-    Serial.print("📡 IP Address: ");
+    Serial.print(F("📡 IP Address: "));
     Serial.println(WiFi.localIP());
   } else if (cmd == "!show") {
-    Serial.println("📦 Current Settings:");
+    Serial.println(F("📦 Current Settings:"));
     Serial.println(" userName: " + userName);
     Serial.println(" userId: " + userId);
     Serial.println(" avatarColor: " + avatarColor);
-    Serial.println(" ssid: "); //Serial.println(" ssid: " + ssid);
-    Serial.println(" password: "); //Serial.println(" password: " + password);
+    Serial.println(F(" ssid: ")); //Serial.println(" ssid: " + ssid);
+    Serial.println(F(" password: ")); //Serial.println(" password: " + password);
   } else if (cmd == "!help") {
-    Serial.println("📘 Available commands:");
-    Serial.println(" !setname [name] – set display name");
-    Serial.println(" !setid [id] – set user ID");
-    Serial.println(" !setcolor [hex] – set avatar color");
-    Serial.println(" !setssid [ssid] – set SSID (requires !reboot)");  //    Serial.println(" !setssid [ssid] – set WiFi SSID (requires !reboot)");
-    Serial.println(" !setpass [pass] – set password (requires !reboot)");  //    Serial.println(" !setpass [pass] – set WiFi password (requires !reboot)");
-    Serial.println(" !show – show current config values");
-    Serial.println(" !reset – reset all settings to default");
-    Serial.println(" !reboot – restart device");
-    Serial.println(" !ip – show IP address");
+    Serial.println(F("📘 Available commands:"));
+    Serial.println(F(" !setname [name] – set display name"));
+    Serial.println(F(" !setid [id] – set user ID"));
+    Serial.println(F(" !setcolor [hex] – set avatar color"));
+    Serial.println(F(" !setssid [ssid] – set SSID (requires !reboot)"));  //    Serial.println(" !setssid [ssid] – set WiFi SSID (requires !reboot)");
+    Serial.println(F(" !setpass [pass] – set password (requires !reboot)"));  //    Serial.println(" !setpass [pass] – set WiFi password (requires !reboot)");
+    Serial.println(F(" !show – show current config values"));
+    Serial.println(F(" !reset – reset all settings to default"));
+    Serial.println(F(" !reboot – restart device"));
+    Serial.println(F(" !ip – show IP address"));
   } else {
-    Serial.println("❓ Unknown command");
+    Serial.println(F("❓ Unknown command"));
   }
 }
 
@@ -263,7 +263,7 @@ void sendMessage(String content) {
 
   int code = https.POST(json);
   if (code > 0) {
-    Serial.println("📤 Sent");
+    Serial.println(F("📤 Sent"));
   } else {
     Serial.printf("❌ Send failed: %s\n", https.errorToString(code).c_str());
   }
