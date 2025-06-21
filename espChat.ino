@@ -5,6 +5,11 @@
 #include <Preferences.h>
 #include "esp_log.h"
 
+// Enable WiFi debug output if needed
+#define DEBUG_WIFI 0
+// Show stored credentials when using !show
+#define SHOW_CREDENTIALS 0
+
 Preferences prefs;
 
 const char* DEFAULT_NAME = "Big-John";
@@ -88,7 +93,9 @@ void setup() {
   Serial.println("📘 Type !help for editable settings and commands");
 
   Serial.print("🔌 Connecting to ChatBox: ");
-  //Serial.println(ssid);
+#if DEBUG_WIFI
+  Serial.println(ssid);
+#endif
   WiFi.begin(ssid.c_str(), password.c_str());
 
   unsigned long start = millis();
@@ -222,15 +229,15 @@ void handleCommand(String cmd) {
     Serial.println(" userName: " + userName);
     Serial.println(" userId: " + userId);
     Serial.println(" avatarColor: " + avatarColor);
-    Serial.println(" ssid: "); //Serial.println(" ssid: " + ssid);
-    Serial.println(" password: "); //Serial.println(" password: " + password);
+    Serial.println(" ssid: " + String(SHOW_CREDENTIALS ? ssid : "[hidden]"));
+    Serial.println(" password: " + String(SHOW_CREDENTIALS ? password : "[hidden]"));
   } else if (cmd == "!help") {
     Serial.println("📘 Available commands:");
     Serial.println(" !setname [name] – set display name");
     Serial.println(" !setid [id] – set user ID");
     Serial.println(" !setcolor [hex] – set avatar color");
-    Serial.println(" !setssid [ssid] – set SSID (requires !reboot)");  //    Serial.println(" !setssid [ssid] – set WiFi SSID (requires !reboot)");
-    Serial.println(" !setpass [pass] – set password (requires !reboot)");  //    Serial.println(" !setpass [pass] – set WiFi password (requires !reboot)");
+    Serial.println(" !setssid [ssid] – set SSID (requires !reboot)");
+    Serial.println(" !setpass [pass] – set password (requires !reboot)");
     Serial.println(" !show – show current config values");
     Serial.println(" !reset – reset all settings to default");
     Serial.println(" !reboot – restart device");
