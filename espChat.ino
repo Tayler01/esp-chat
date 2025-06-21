@@ -20,7 +20,6 @@ String userName, userId, avatarColor, ssid, password;
 String lastTimestamp = "";
 unsigned long lastPoll = 0;
 unsigned long pollInterval = 5000;
-unsigned long lastReconnectAttempt = 0;
 
 WiFiClientSecure client;
 
