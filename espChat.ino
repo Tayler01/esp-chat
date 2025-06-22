@@ -87,7 +87,7 @@ void clearWifiOnVersionChange() {
     prefs.remove("ssid");
     prefs.remove("pass");
     prefs.putString("fw_version", CURRENT_VERSION);
-    Serial.println(F("🚀 Detected new firmware. Cleared saved Wi-Fi credentials."));
+    Serial.println(F("🚀 Detected new firmware. Cleared saved credentials."));
   }
   prefs.end();
 }
