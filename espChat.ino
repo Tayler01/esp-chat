@@ -80,9 +80,22 @@ void resetSettings() {
   ESP.restart();
 }
 
+void clearWifiOnVersionChange() {
+  prefs.begin("chat", false);
+  String fwStored = prefs.getString("fw_version", "");
+  if (fwStored != CURRENT_VERSION) {
+    prefs.remove("ssid");
+    prefs.remove("pass");
+    prefs.putString("fw_version", CURRENT_VERSION);
+    Serial.println(F("🚀 Detected new firmware. Cleared saved Wi-Fi credentials."));
+  }
+  prefs.end();
+}
+
 void handleCommand(String cmd);
 void sendMessage(String content);
 void fetchMessages();
+void clearWifiOnVersionChange();
 
 
 // === Core Setup ===
@@ -92,6 +105,11 @@ void setup() {
 
   Serial.begin(115200);
   delay(500);
+
+  Serial.print(F("\xF0\x9F\x93\x86 Firmware version: "));
+  Serial.println(F(CURRENT_VERSION));
+
+  clearWifiOnVersionChange();
 
   loadSettings();
   Serial.println(F("📘 Type !help for editable settings and commands"));
@@ -316,9 +334,7 @@ void fetchMessages() {
   https.addHeader("Authorization", "Bearer " + String(supabaseKey));
 
   int httpCode = https.GET();
-  String raw = https.getString(); // Log raw for debugging
-  Serial.println("🔍 FetchMessages Response:");
-  Serial.println(raw);
+  String raw = https.getString();
 
   if (httpCode == 200) {
     const size_t AVG_MSG = 200;
@@ -364,8 +380,6 @@ void checkForUpdate() {
   https.addHeader("Authorization", "Bearer " + String(supabaseKey));
   int code = https.GET();
   String raw = https.getString();
-  Serial.println("🔍 Firmware Update Response:");
-  Serial.println(raw);
 
   if (code == 200) {
     DynamicJsonDocument doc(JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(2) + 128);
