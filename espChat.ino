@@ -13,16 +13,16 @@
 
 Preferences prefs;
 
-const char* DEFAULT_NAME = "Big-John";
-const char* DEFAULT_ID = "esp32-001";
+const char* DEFAULT_NAME = "Caleb";
+const char* DEFAULT_ID = "esp32-002";
 const char* DEFAULT_COLOR = "#10B981";
-const char* DEFAULT_SSID = "Powm";
-const char* DEFAULT_PASS = "42375400";
+const char* DEFAULT_SSID = "Camper1407";
+const char* DEFAULT_PASS = "Taylerkid@1407";
 
 const char* supabaseUrl = "https://qymcapixzxuvzcgdjksq.supabase.co/rest/v1/messages";
 const char* supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5bWNhcGl4enh1dnpjZ2Rqa3NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NTU4MTIsImV4cCI6MjA2NTMzMTgxMn0.GNeDHArcgJZNQpKQOL7DDRQJqbwQ5YwcQOOTsL6TvuE";
 
-#define CURRENT_VERSION "1.0.0"
+#define CURRENT_VERSION "1.0.1"
 const char* updateQueryUrl = "https://qymcapixzxuvzcgdjksq.supabase.co/rest/v1/firmware_updates?select=version,binary_url&order=version.desc&limit=1";
 String userName, userId, avatarColor, ssid, password;
 String lastTimestamp = "";
@@ -307,7 +307,7 @@ void fetchMessages() {
   String url = String(supabaseUrl) + "?select=content,user_name,created_at,user_id"
                + "&order=created_at.asc&limit=50";
 
-  if (lastTimestamp.length() > 0) {
+  if (lastTimestamp.length() > 0 && lastTimestamp.indexOf("T") > 0) {
     url += "&created_at=gt." + urlEncode(lastTimestamp);
   }
 
@@ -316,12 +316,15 @@ void fetchMessages() {
   https.addHeader("Authorization", "Bearer " + String(supabaseKey));
 
   int httpCode = https.GET();
+  String raw = https.getString(); // Log raw for debugging
+  Serial.println("🔍 FetchMessages Response:");
+  Serial.println(raw);
+
   if (httpCode == 200) {
-    const size_t AVG_MSG = 200; // avg chars per message
+    const size_t AVG_MSG = 200;
     size_t capacity = JSON_ARRAY_SIZE(50) + 50 * JSON_OBJECT_SIZE(4) + 50 * AVG_MSG;
     DynamicJsonDocument doc(capacity);
-
-    DeserializationError err = deserializeJson(doc, https.getStream());
+    DeserializationError err = deserializeJson(doc, raw);
     if (err) {
       Serial.printf("❌ Fetch JSON parse error: %s\n", err.c_str());
       https.end();
@@ -346,27 +349,32 @@ void fetchMessages() {
       lastTimestamp = ts;
     }
   } else {
-    Serial.printf("❌ Fetch failed (%d): %s\n", httpCode, https.getString().c_str());
+    Serial.printf("❌ Fetch failed (%d): %s\n", httpCode, raw.c_str());
   }
 
   https.end();
 }
 
+
 void checkForUpdate() {
-  Serial.println(F("\xF0\x9F\x94\x8D Checking for firmware update..."));
+  Serial.println(F("🔍 Checking for firmware update..."));
   HTTPClient https;
   https.begin(client, updateQueryUrl);
   https.addHeader("apikey", supabaseKey);
   https.addHeader("Authorization", "Bearer " + String(supabaseKey));
   int code = https.GET();
+  String raw = https.getString();
+  Serial.println("🔍 Firmware Update Response:");
+  Serial.println(raw);
+
   if (code == 200) {
-    DynamicJsonDocument doc(JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(2) + 64);
-    DeserializationError err = deserializeJson(doc, https.getStream());
+    DynamicJsonDocument doc(JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(2) + 128);
+    DeserializationError err = deserializeJson(doc, raw);
     if (!err && doc.size() > 0) {
       String latest = doc[0]["version"] | "";
       String binUrl = doc[0]["binary_url"] | "";
       if (latest.length() > 0 && binUrl.length() > 0 && latest != CURRENT_VERSION) {
-        Serial.printf("\xF0\x9F\x94\x84 Updating to %s from %s\n", latest.c_str(), CURRENT_VERSION);
+        Serial.printf("⬆️  Updating to version %s (from %s)\n", latest.c_str(), CURRENT_VERSION);
         https.end();
 
         HTTPClient bin;
@@ -378,12 +386,12 @@ void checkForUpdate() {
           if (Update.begin(total)) {
             size_t written = Update.writeStream(*stream);
             if (written == total) {
-              Serial.println(F("\xE2\x9C\x85 Update written"));
+              Serial.println(F("✅ Update written"));
             } else {
-              Serial.println(F("\xE2\x9A\xA0\xEF\xB8\x8F Incomplete write"));
+              Serial.println(F("⚠️ Incomplete write"));
             }
             if (Update.end()) {
-              Serial.println(F("\xF0\x9F\x94\x81 Rebooting to apply update..."));
+              Serial.println(F("🔁 Rebooting to apply update..."));
               ESP.restart();
             } else {
               Update.printError(Serial);
@@ -392,18 +400,18 @@ void checkForUpdate() {
             Update.printError(Serial);
           }
         } else {
-          Serial.printf("\xE2\x9D\x8C Firmware download failed (%d)\n", bCode);
+          Serial.printf("❌ Firmware download failed (%d)\n", bCode);
         }
         bin.end();
         return;
       } else {
-        Serial.println(F("Firmware up to date"));
+        Serial.println(F("ℹ️ Firmware up to date."));
       }
     } else {
-      Serial.println(F("Update JSON parse error"));
+      Serial.printf("❌ Update JSON parse error: %s\n", err.c_str());
     }
   } else {
-    Serial.printf("Update check failed (%d): %s\n", code, https.getString().c_str());
+    Serial.printf("❌ Update check failed (%d): %s\n", code, raw.c_str());
   }
   https.end();
 }
