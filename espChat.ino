@@ -328,6 +328,13 @@ void fetchMessages() {
       return;
     }
 
+    String prevSenderId = "";
+    String prevName = "";
+    String prevContent = "";
+    String prevTime = "";
+    bool prevIsUser = false;
+    bool hasPrev = false;
+
     for (JsonObject msg : doc.as<JsonArray>()) {
       String ts = msg["created_at"] | "";
       if (ts.length() == 0 || ts <= lastTimestamp) continue;
@@ -337,13 +344,34 @@ void fetchMessages() {
       String content = msg["content"] | "";
       String timeStr = formatTimestamp(ts);
 
-      if (senderId == userId) {
-        Serial.printf("[%s] ✍️  You: %s\n", timeStr.c_str(), content.c_str());
-      } else {
-        Serial.printf("[%s] 🟢 %s: %s\n", timeStr.c_str(), name.c_str(), content.c_str());
+      if (hasPrev) {
+        if (prevSenderId == senderId) {
+          Serial.println(prevContent);
+        } else {
+          if (prevIsUser) {
+            Serial.printf("[%s] ✍️  You: %s\n", prevTime.c_str(), prevContent.c_str());
+          } else {
+            Serial.printf("[%s] 🟢 %s: %s\n", prevTime.c_str(), prevName.c_str(), prevContent.c_str());
+          }
+        }
       }
 
+      prevSenderId = senderId;
+      prevName = name;
+      prevContent = content;
+      prevTime = timeStr;
+      prevIsUser = senderId == userId;
+      hasPrev = true;
+
       lastTimestamp = ts;
+    }
+
+    if (hasPrev) {
+      if (prevIsUser) {
+        Serial.printf("[%s] ✍️  You: %s\n", prevTime.c_str(), prevContent.c_str());
+      } else {
+        Serial.printf("[%s] 🟢 %s: %s\n", prevTime.c_str(), prevName.c_str(), prevContent.c_str());
+      }
     }
   } else {
     Serial.printf("❌ Fetch failed (%d): %s\n", httpCode, https.getString().c_str());
